@@ -102,8 +102,11 @@
         p_sort: o.sort === "reported" ? "new" : o.sort,
         p_lang: o.lang === "all" ? null : o.lang,
         p_limit: PAGE, p_offset: o.offset, p_reported: o.sort === "reported",
+        p_tag: o.tag || null, p_id: null,
       }),
-      post: (body, lang, showName) => rpc("create_chisme", { p_body: body, p_lang: lang, p_show_name: showName }),
+      one: async (id) => (await rpc("get_feed", { p_sort: "new", p_lang: null, p_limit: 1, p_offset: 0, p_reported: false, p_tag: null, p_id: id }))[0] || null,
+      today: async () => (await rpc("get_feed", { p_sort: "today", p_lang: null, p_limit: 1, p_offset: 0, p_reported: false, p_tag: null, p_id: null }))[0] || null,
+      post: (body, lang, showName, tag) => rpc("create_chisme", { p_body: body, p_lang: lang, p_show_name: showName, p_tag: tag || null }),
       vote: (id, v) => rpc("cast_vote", { p_chisme: id, p_value: v }),
       report: (id) => rpc("report_chisme", { p_chisme: id, p_reason: null }),
       del: (id) => rpc("delete_chisme", { p_chisme: id }),
@@ -154,7 +157,8 @@
       is_mine: false, my_vote: null,
     }));
     let me = { signed_in: false, is_anonymous: true, username: null, is_admin: false, banned: false };
-    rows.forEach((r) => { r.author = "op" + r.id; r.reply_count = 0; });
+    const demoTags = ["vecinos", "trabajo", "familia", "vecinos", "familia", "trabajo", "familia"];
+    rows.forEach((r, k) => { r.author = "op" + r.id; r.reply_count = 0; r.tag = demoTags[k] || null; });
     let nextReply = 1;
     let replies = [];
     const seedReplies = {
@@ -173,16 +177,22 @@
       async ensureSession() { me.signed_in = true; },
       async me() { return wait({ ...me }); },
       async feed(o) {
-        let list = rows.filter((r) => (!r.hidden || me.is_admin) && (o.lang === "all" || r.lang === o.lang));
+        let list = rows.filter((r) => (!r.hidden || me.is_admin) && (o.lang === "all" || r.lang === o.lang) && (!o.tag || r.tag === o.tag));
         if (o.sort === "reported") list = list.filter((r) => r.report_count > 0);
         const by = { new: (a, b) => Date.parse(b.created_at) - Date.parse(a.created_at), top: (a, b) => b.score - a.score, hot: (a, b) => hot(b) - hot(a) };
         list.sort(by[o.sort] || by.new);
         return wait(list.slice(o.offset, o.offset + PAGE).map((r) => ({ ...r })));
       },
-      async post(body, lang, showName) {
+      async one(id) { const r = rows.find((x) => x.id === id && (!x.hidden || me.is_admin)); return wait(r ? { ...r } : null); },
+      async today() {
+        const day = rows.filter((r) => !r.hidden && Date.now() - Date.parse(r.created_at) < 24 * H && r.score + r.reply_count >= 3)
+          .sort((a, b) => (b.score * 2 + b.reply_count) - (a.score * 2 + a.reply_count));
+        return wait(day[0] ? { ...day[0] } : null);
+      },
+      async post(body, lang, showName, tag) {
         const code = precheck(body);
         if (code) throw new AppError(code);
-        rows.unshift({ id: nextId++, body: body.trim(), lang, author_name: showName && me.username ? me.username : null,
+        rows.unshift({ id: nextId++, body: body.trim(), lang, tag: tag || null, author_name: showName && me.username ? me.username : null,
           hot_cups: 0, iced_cups: 0, score: 0, report_count: 0, hidden: false, created_at: new Date().toISOString(),
           is_mine: true, my_vote: null, author: "me", reply_count: 0 });
         return wait(nextId - 1);
@@ -245,9 +255,14 @@
   const state = {
     sort: store.get("oc_sort", "hot"),
     lang: store.get("oc_flang", "all"),
+    tag: null,           // topic filter
+    postTag: null,       // topic picked in the composer
+    single: null,        // id when viewing one chisme from a shared link
+    featured: null,
     items: [], offset: 0, done: false, loading: false,
     me: { signed_in: false, is_anonymous: true, username: null, is_admin: false },
   };
+  const TAGS = ["amor", "trabajo", "familia", "vecinos", "amigas", "random"];
   if (!["hot", "new", "top"].includes(state.sort)) state.sort = "hot";
 
   // ── Toast ───────────────────────────────────────────────────────────
@@ -297,7 +312,25 @@
     document.querySelectorAll('input[name="flang"]').forEach((i) => { i.checked = i.value === state.lang; });
     $("demoNote").hidden = !DEMO;
     $("demoNote").textContent = t.demo;
+    $("tagPickLbl").textContent = t.tagPick;
+    $("backBtn").textContent = t.backToAll;
+    paintChips($("tagPick"), [null, ...TAGS], state.postTag, (k) => (k ? t.tags[k] : t.noTag), (k) => { state.postTag = k; paintText(); });
+    paintChips($("tagFilter"), [null, ...TAGS], state.tag, (k) => (k ? t.tags[k] : t.allTopics), (k) => {
+      state.tag = k; paintText(); loadFeed(true);
+    });
     paintMe();
+  }
+
+  function paintChips(box, keys, current, label, onPick) {
+    box.textContent = "";
+    keys.forEach((k) => {
+      const b = el("button", "chip-btn", label(k));
+      b.type = "button";
+      b.setAttribute("role", "radio");
+      b.setAttribute("aria-checked", String(k === current));
+      b.addEventListener("click", () => { if (k !== current) onPick(k); });
+      box.appendChild(b);
+    });
   }
 
   function paintMe() {
@@ -334,6 +367,12 @@
     meta.appendChild(el("time", "when", ago(item.created_at)));
     meta.lastChild.dateTime = item.created_at;
     meta.appendChild(el("span", "lang-tag", item.lang.toUpperCase()));
+    if (item.tag && t.tags[item.tag]) {
+      const tg = el("button", "topic", t.tags[item.tag]);
+      tg.type = "button";
+      tg.addEventListener("click", () => { state.tag = item.tag; goAll(); });
+      meta.appendChild(tg);
+    }
     if (item.hidden) meta.appendChild(el("span", "flag", t.hiddenTag));
     if (item.report_count > 0 && state.me.is_admin) meta.appendChild(el("span", "flag", t.reportsTag(item.report_count)));
     a.appendChild(meta);
@@ -357,7 +396,13 @@
     chatB.setAttribute("aria-expanded", String(open));
     chatB.setAttribute("aria-label", item.reply_count ? t.repliesBtn(item.reply_count) : t.replyFirst);
     chatB.append(el("span", "cup-ico", "💬"), el("span", "cup-n", item.reply_count ? String(item.reply_count) : t.replyFirst));
-    bar.append(hotB, icedB, chatB);
+    const shareB = el("button", "icon-btn");
+    shareB.type = "button";
+    shareB.title = t.share;
+    shareB.setAttribute("aria-label", t.share);
+    shareB.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    shareB.addEventListener("click", () => share(item));
+    bar.append(hotB, icedB, chatB, shareB);
 
     const entries = [];
     if (!item.is_mine) entries.push([t.report, () => report(item)]);
@@ -527,20 +572,23 @@
 
   function paintFeed() {
     const f = $("feed");
+    const single = state.single != null;
     f.textContent = "";
     state.items.forEach((it, i) => f.appendChild(bubble(it, i)));
-    $("moreBtn").hidden = state.done || state.items.length === 0;
+    $("moreBtn").hidden = single || state.done || state.items.length === 0;
     const empty = !state.loading && state.items.length === 0;
     $("emptyMsg").hidden = !empty;
-    $("emptyMsg").textContent = state.sort === "reported" ? T().emptyReported : T().empty;
+    $("emptyMsg").textContent = single ? T().notFoundPost : state.sort === "reported" ? T().emptyReported : T().empty;
+    paintFeatured();
   }
 
   async function loadFeed(reset) {
+    if (state.single != null) return loadSingle();
     if (state.loading) return;
     state.loading = true;
     if (reset) { state.offset = 0; state.done = false; }
     try {
-      const rows = await api.feed({ sort: state.sort, lang: state.lang, offset: state.offset });
+      const rows = await api.feed({ sort: state.sort, lang: state.lang, tag: state.tag, offset: state.offset });
       state.items = reset ? rows : state.items.concat(rows);
       state.offset += rows.length;
       state.done = rows.length < PAGE;
@@ -550,6 +598,85 @@
       state.loading = false;
       paintFeed();
     }
+    if (reset) loadFeatured();
+  }
+
+  // ── Chisme del día ──────────────────────────────────────────────────
+  async function loadFeatured() {
+    try { state.featured = await api.today(); } catch { state.featured = null; }
+    paintFeatured();
+  }
+
+  function paintFeatured() {
+    const box = $("featured"), t = T(), f = state.featured;
+    const show = f && state.single == null && state.sort !== "reported";
+    box.hidden = !show;
+    if (!show) return;
+    box.textContent = "";
+    box.appendChild(el("p", "featured-label", t.featured));
+    const body = el("p", "featured-body", f.body);
+    body.lang = f.lang;
+    box.appendChild(body);
+    const row = el("div", "featured-row");
+    row.appendChild(el("span", "featured-stats", `☕ ${f.hot_cups}   💬 ${f.reply_count || 0}`));
+    const go = el("button", "btn btn-small", t.seeChisme);
+    go.type = "button";
+    go.addEventListener("click", () => { location.hash = "c" + f.id; });
+    row.appendChild(go);
+    box.appendChild(row);
+  }
+
+  // ── One chisme from a shared link (#c123) ───────────────────────────
+  async function loadSingle() {
+    state.loading = true;
+    try {
+      const one = await api.one(state.single);
+      state.items = one ? [one] : [];
+      if (one) openThreads.add(one.id);
+    } catch (e) {
+      state.items = [];
+      toast(errText(e));
+    } finally {
+      state.loading = false;
+      state.done = true;
+      paintFeed();
+      window.scrollTo(0, 0);
+    }
+  }
+
+  function route() {
+    const m = /^#c(\d+)$/.exec(location.hash);
+    state.single = m ? Number(m[1]) : null;
+    const single = state.single != null;
+    $("singleBar").hidden = !single;
+    $("composer").hidden = single;
+    $("feedTools").hidden = single;
+    $("tagFilter").hidden = single;
+    loadFeed(true);
+  }
+
+  function goAll() {
+    if (state.single != null) {
+      try { history.pushState("", "", location.pathname + location.search); } catch { location.hash = ""; }
+      route();
+    } else {
+      paintText();
+      loadFeed(true);
+    }
+    window.scrollTo(0, 0);
+  }
+
+  // ── Share ───────────────────────────────────────────────────────────
+  async function share(item) {
+    const t = T();
+    const url = `${location.origin}${location.pathname}#c${item.id}`;
+    const excerpt = item.body.length > 90 ? item.body.slice(0, 90).trimEnd() + "…" : item.body;
+    if (navigator.share) {
+      try { await navigator.share({ title: "OnlyChismosas", text: `${t.shareText} "${excerpt}"`, url }); return; }
+      catch (e) { if (e && e.name === "AbortError") return; }
+    }
+    try { await navigator.clipboard.writeText(url); toast(t.copied); }
+    catch { toast(url); }
   }
 
   // ── Actions ─────────────────────────────────────────────────────────
@@ -617,10 +744,11 @@
       btn.disabled = true; btn.textContent = T().posting; msg.textContent = "";
       try {
         await api.ensureSession();
-        await api.post(text, lang, $("showName").checked);
+        await api.post(text, lang, $("showName").checked, state.postTag);
         body.value = ""; count.textContent = "0 / 1000";
         toast(T().posted);
         state.sort = "new"; store.set("oc_sort", "new");
+        state.postTag = null; state.tag = null;
         paintText();
         await loadFeed(true);
         refreshMe();
@@ -747,7 +875,9 @@
     // Show house rules once on first visit
     if (store.get("oc_rules_seen", "") !== "1") { store.set("oc_rules_seen", "1"); setTimeout(openRules, 400); }
 
-    refreshMe().then(() => loadFeed(true));
+    $("backBtn").addEventListener("click", goAll);
+    window.addEventListener("hashchange", route);
+    refreshMe().then(route);
   }
 
   init();

@@ -148,6 +148,75 @@ a.pill { text-decoration: none; color: inherit; display: inline-flex; align-item
 .form-msg.err { color: var(--err); }
 .form-msg.ok { color: var(--ok); }
 
+/* ── Topics ─────────────────────────────────────────────────────── */
+.tag-pick { border: 0; padding: 0; margin: 12px 0 0; min-width: 0; }
+.tag-pick legend { padding: 0; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: var(--plum-soft); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips-scroll { flex-wrap: nowrap; overflow-x: auto; margin: -6px 0 18px; padding-bottom: 4px; scrollbar-width: none; }
+.chips-scroll::-webkit-scrollbar { display: none; }
+.chip-btn {
+  flex-shrink: 0;
+  border: 1.5px solid var(--rose-deep);
+  background: transparent;
+  border-radius: 999px;
+  padding: 4px 11px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--plum);
+  white-space: nowrap;
+}
+.chip-btn[aria-checked="true"] { background: var(--plum); border-color: var(--plum); color: var(--rose); }
+.topic {
+  border: 0;
+  background: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--plum-soft);
+  text-decoration: underline;
+  text-decoration-color: var(--rose-deep);
+  text-underline-offset: 3px;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 36px;
+  border: 0;
+  background: none;
+  border-radius: 999px;
+  color: var(--plum-soft);
+}
+.icon-btn:hover { background: var(--rose); color: var(--plum); }
+
+/* ── Chisme del día ─────────────────────────────────────────────── */
+.featured {
+  margin: 0 0 26px;
+  padding: 16px 18px 14px;
+  background: var(--marigold);
+  color: #3a0f2d;
+  border: 2px solid var(--plum);
+  border-radius: var(--r-bubble);
+  box-shadow: 4px 4px 0 var(--plum);
+}
+.featured-label { margin: 0 0 6px; font-family: var(--font-display); font-size: 20px; line-height: 1.1; }
+.featured-body {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.featured-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.featured-stats { font-weight: 700; font-variant-numeric: tabular-nums; white-space: pre; }
+.btn-small { padding: 6px 14px; font-size: 14px; box-shadow: 2px 2px 0 var(--plum); }
+.single-bar { margin: 18px 0 18px; }
+
 /* ── Feed tools ─────────────────────────────────────────────────── */
 .feed-tools { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
 .tabs { display: flex; gap: 4px; flex-wrap: wrap; }
@@ -166,8 +235,8 @@ a.pill { text-decoration: none; color: inherit; display: inline-flex; align-item
 .feed { display: flex; flex-direction: column; gap: 26px; }
 .bubble {
   position: relative;
-  width: min(92%, 560px);
-  padding: 16px 18px 10px;
+  width: min(96%, 560px);
+  padding: 16px 16px 10px;
   background: var(--paper);
   border-radius: var(--r-bubble);
   box-shadow: var(--shadow);
@@ -193,7 +262,7 @@ a.pill { text-decoration: none; color: inherit; display: inline-flex; align-item
 .lang-tag { border: 1.5px solid var(--rose-deep); border-radius: 6px; padding: 0 5px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
 .flag { color: var(--err); font-weight: 600; }
 
-.bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.bar { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .cup {
   display: inline-flex;
   align-items: center;
@@ -201,7 +270,7 @@ a.pill { text-decoration: none; color: inherit; display: inline-flex; align-item
   border: 2px solid var(--rose-deep);
   background: transparent;
   border-radius: var(--r-ctl);
-  padding: 4px 12px 4px 8px;
+  padding: 4px 9px 4px 6px;
   font-weight: 700;
   font-size: 15px;
   font-variant-numeric: tabular-nums;

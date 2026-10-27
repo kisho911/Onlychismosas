@@ -5,8 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>OnlyChismosas</title>
   <meta name="description" content="Spill the tea. Suelta el chisme. Anonymous gossip, voted by tea cups.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://onlychismosas.com/">
   <meta property="og:title" content="OnlyChismosas">
-  <meta property="og:description" content="Spill the tea. Suelta el chisme.">
+  <meta property="og:description" content="Suelta el chisme. Spill the tea. Anónimo, bilingüe, votado con tacitas de té ☕">
+  <meta property="og:image" content="https://onlychismosas.com/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://onlychismosas.com/og.png">
+  <meta name="theme-color" content="#f4cdd6">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -39,6 +47,10 @@
         </div>
         <span class="count" id="count">0 / 1000</span>
       </div>
+      <fieldset class="tag-pick">
+        <legend id="tagPickLbl"></legend>
+        <div class="chips" id="tagPick"></div>
+      </fieldset>
       <label class="check" id="showNameRow" hidden><input type="checkbox" id="showName"> <span id="showNameText"></span></label>
       <div class="composer-row">
         <button type="button" class="link" id="rulesLink"></button>
@@ -47,7 +59,13 @@
       <p class="form-msg" id="postMsg" role="status"></p>
     </form>
 
-    <nav class="feed-tools" aria-label="Feed">
+    <div class="single-bar" id="singleBar" hidden>
+      <button type="button" class="pill" id="backBtn"></button>
+    </div>
+
+    <section class="featured" id="featured" hidden></section>
+
+    <nav class="feed-tools" aria-label="Feed" id="feedTools">
       <div class="tabs" role="tablist" id="sortTabs">
         <button role="tab" data-sort="hot"></button>
         <button role="tab" data-sort="new"></button>
@@ -60,6 +78,8 @@
         <label><input type="radio" name="flang" value="en"><span>EN</span></label>
       </div>
     </nav>
+
+    <div class="chips chips-scroll" id="tagFilter" role="radiogroup" aria-label="Topics"></div>
 
     <section class="feed" id="feed" aria-live="polite"></section>
     <div class="feed-end">

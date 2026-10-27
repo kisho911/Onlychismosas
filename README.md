@@ -21,7 +21,7 @@ While `config.js` is empty, the site runs in demo mode with fake posts.
 
 ### 1. Supabase (the database)
 1. Sign up at **supabase.com** and click **New project**. Name it `onlychismosas`, pick region **East US**, and save the database password somewhere.
-2. Open **SQL Editor**, click **New query**, paste all of `supabase/schema.sql`, and click **Run**. You should see "Success".
+2. Open **SQL Editor**, click **New query**, paste all of `supabase/schema.sql`, and click **Run**. You should see "Success". Then do the same with `supabase/02_replies.sql` (replies / group chat).
 3. Go to **Authentication → Sign In / Providers**:
    - Turn **on** "Allow anonymous sign-ins". Visitors can't vote or post without this.
    - Under **Email**, turn **off** "Confirm email". The free plan only sends a few emails per hour.

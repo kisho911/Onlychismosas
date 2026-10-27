@@ -192,7 +192,7 @@ button { cursor: pointer; }
 .lang-tag { border: 1.5px solid var(--rose-deep); border-radius: 6px; padding: 0 5px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
 .flag { color: var(--err); font-weight: 600; }
 
-.bar { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .cup {
   display: inline-flex;
   align-items: center;
@@ -215,6 +215,65 @@ button { cursor: pointer; }
   40% { transform: scale(1.35) rotate(-14deg); }
   100% { transform: scale(1) rotate(0); }
 }
+
+.cup-chat { border-style: dashed; }
+.cup-chat[aria-expanded="true"] { border-style: solid; border-color: var(--plum); }
+.cup-chat .cup-n { font-weight: 600; font-size: 14px; }
+
+/* ── Group chat under a chisme ──────────────────────────────────── */
+.thread {
+  margin: 12px -10px 2px;
+  padding: 12px 10px 10px;
+  background: var(--rose);
+  border-radius: 16px;
+}
+.chat { display: flex; flex-direction: column; gap: 6px; }
+.thread-empty { margin: 4px 2px 8px; font-size: 14px; color: var(--plum-soft); }
+.msg {
+  max-width: 82%;
+  padding: 7px 12px 4px;
+  border-radius: 18px;
+  background: var(--paper);
+}
+.msg-them { align-self: flex-start; border-bottom-left-radius: 6px; }
+.msg-mine { align-self: flex-end; border-bottom-right-radius: 6px; background: var(--magenta); color: #fff; }
+.msg-op:not(.msg-mine) { box-shadow: inset 3px 0 0 var(--marigold); }
+.msg-cont { margin-top: -3px; }
+.msg-who { display: block; font-size: 12px; font-weight: 700; color: var(--plum-soft); margin-bottom: 1px; }
+.msg-op .msg-who { color: var(--magenta); }
+.msg-mine .msg-who { color: rgba(255, 255, 255, 0.85); }
+.msg-body { margin: 0; font-size: 16px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg-meta { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--plum-soft); }
+.msg-mine .msg-meta { color: rgba(255, 255, 255, 0.75); }
+.msg-meta .more summary { padding: 0 6px; font-size: 13px; }
+.msg-mine .msg-meta .more summary { color: rgba(255, 255, 255, 0.85); }
+.msg-meta .more-list { color: var(--plum); }
+.msg.is-hidden { opacity: 0.5; }
+
+.reply-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-top: 12px; }
+.reply-form textarea {
+  flex: 1;
+  min-width: 0;
+  resize: none;
+  border: 2px solid var(--plum);
+  border-radius: 20px;
+  background: var(--paper);
+  padding: 8px 14px;
+  font-size: 16px;
+  line-height: 1.35;
+  max-height: 140px;
+}
+.reply-form .send {
+  border: 2px solid var(--plum);
+  background: var(--plum);
+  color: var(--rose);
+  border-radius: var(--r-ctl);
+  padding: 8px 16px;
+  font-weight: 700;
+}
+.reply-form .send:disabled { opacity: 0.6; }
+.check-small { margin-top: 0; font-size: 13px; flex-basis: 100%; }
+.reply-form .form-msg { flex-basis: 100%; margin: 0; }
 
 .more { position: relative; margin-left: auto; }
 .more summary {

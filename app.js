@@ -18,9 +18,10 @@
   const T = () => window.OC_I18N[ui];
 
   // ── Shared checks (mirrors the database rules for instant feedback) ─
-  function precheck(text) {
+  function precheck(text, isReply) {
     const b = text.trim();
-    if (b.length < 10 || b.length > 1000) return "bad_length";
+    if (isReply) { if (b.length < 2 || b.length > 500) return "bad_reply_length"; }
+    else if (b.length < 10 || b.length > 1000) return "bad_length";
     if (/(https?:\/\/|www\.|[a-z0-9-]+\.(com|net|org|io|co|me|ly|xyz|app|info|biz|link|site|shop)(\b|\/))/i.test(b)) return "no_links";
     if (/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i.test(b)) return "no_contact_info";
     if (/(^|[^a-z0-9])@[a-z0-9_.]{3,}/i.test(b)) return "no_contact_info";
@@ -109,6 +110,12 @@
       hide: (id, h) => rpc("admin_set_hidden", { p_chisme: id, p_hidden: h }),
       ban: (id) => rpc("admin_ban_author", { p_chisme: id }),
       setUsername: (u) => rpc("set_username", { p_username: u }),
+      replies: (id) => rpc("get_replies", { p_chisme: id }),
+      reply: (id, body, showName) => rpc("create_reply", { p_chisme: id, p_body: body, p_show_name: showName }),
+      reportReply: (rid) => rpc("report_reply", { p_reply: rid }),
+      delReply: (rid) => rpc("delete_reply", { p_reply: rid }),
+      hideReply: (rid, h) => rpc("admin_set_reply_hidden", { p_reply: rid, p_hidden: h }),
+      banReplyAuthor: (rid) => rpc("admin_ban_reply_author", { p_reply: rid }),
       async signUp(email, password, username) {
         const captchaToken = await getCaptcha();
         const { data, error } = await sb.auth.signUp({ email, password, options: { captchaToken, data: { username } } });
@@ -147,7 +154,20 @@
       is_mine: false, my_vote: null,
     }));
     let me = { signed_in: false, is_anonymous: true, username: null, is_admin: false, banned: false };
-    const hot = (r) => (r.score + 1) / Math.pow((Date.now() - Date.parse(r.created_at)) / H + 2, 1.5);
+    rows.forEach((r) => { r.author = "op" + r.id; r.reply_count = 0; });
+    let nextReply = 1;
+    let replies = [];
+    const seedReplies = {
+      1: [["a", "jajaja la conozco 💀 dice que el pan es 'carga de carbohidratos'", 100], ["op1", "carga de carbohidratos todos los días a las 6am??", 90], ["b", "honestly respect", 80], ["a", "la próxima le pregunto qué gym es 👀", 60]],
+      3: [["a", "nooo la de Selena 😭", 400], ["b", "y el novio??", 380], ["op3", "el novio estaba en la barra pidiendo otro tequila", 370], ["c", "esto es una telenovela", 300]],
+      2: [["a", "the boat is the office now", 200]],
+    };
+    Object.entries(seedReplies).forEach(([cid, list]) => list.forEach(([author, body, minsAgo]) => {
+      replies.push({ id: nextReply++, chisme_id: +cid, author, author_name: null, body, hidden: false, report_count: 0, created_at: new Date(now - minsAgo * 60e3).toISOString() });
+    }));
+    const recount = (cid) => { const r = rows.find((x) => x.id === cid); if (r) r.reply_count = replies.filter((x) => x.chisme_id === cid && !x.hidden).length; };
+    rows.forEach((r) => recount(r.id));
+    const hot = (r) => (r.score + r.reply_count / 2 + 1) / Math.pow((Date.now() - Date.parse(r.created_at)) / H + 2, 1.5);
     const wait = (v) => new Promise((r) => setTimeout(() => r(v), 120));
     return {
       async ensureSession() { me.signed_in = true; },
@@ -163,7 +183,8 @@
         const code = precheck(body);
         if (code) throw new AppError(code);
         rows.unshift({ id: nextId++, body: body.trim(), lang, author_name: showName && me.username ? me.username : null,
-          hot_cups: 0, iced_cups: 0, score: 0, report_count: 0, hidden: false, created_at: new Date().toISOString(), is_mine: true, my_vote: null });
+          hot_cups: 0, iced_cups: 0, score: 0, report_count: 0, hidden: false, created_at: new Date().toISOString(),
+          is_mine: true, my_vote: null, author: "me", reply_count: 0 });
         return wait(nextId - 1);
       },
       async vote(id, v) {
@@ -188,6 +209,30 @@
         me = { signed_in: true, is_anonymous: false, username, is_admin: true, banned: false };
         return wait({ needsConfirm: false });
       },
+      async replies(cid) {
+        const op = rows.find((x) => x.id === cid);
+        if (!op) throw new AppError("not_found");
+        const list = replies.filter((x) => x.chisme_id === cid && (!x.hidden || me.is_admin)).sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
+        const order = [];
+        list.forEach((x) => { if (x.author !== op.author && !order.includes(x.author)) order.push(x.author); });
+        return wait(list.map((x) => ({
+          id: x.id, body: x.body, author_name: x.author_name, hidden: x.hidden, created_at: x.created_at,
+          who_n: x.author === op.author ? 0 : order.indexOf(x.author) + 1,
+          is_mine: x.author === "me", report_count: me.is_admin ? x.report_count : 0,
+        })));
+      },
+      async reply(cid, body, showName) {
+        const code = precheck(body, true);
+        if (code) throw new AppError(code);
+        replies.push({ id: nextReply++, chisme_id: cid, author: "me", author_name: showName && me.username ? me.username : null,
+          body: body.trim(), hidden: false, report_count: 0, created_at: new Date().toISOString() });
+        recount(cid);
+        return wait(nextReply - 1);
+      },
+      async reportReply(rid) { const x = replies.find((y) => y.id === rid); x.report_count++; return wait({ ok: true }); },
+      async delReply(rid) { const x = replies.find((y) => y.id === rid); replies = replies.filter((y) => y !== x); recount(x.chisme_id); return wait({ ok: true }); },
+      async hideReply(rid, h) { const x = replies.find((y) => y.id === rid); x.hidden = h; recount(x.chisme_id); return wait({ ok: true }); },
+      async banReplyAuthor(rid) { const x = replies.find((y) => y.id === rid); x.hidden = true; recount(x.chisme_id); return wait({ ok: true }); },
       async signIn() { me = { signed_in: true, is_anonymous: false, username: "kisho", is_admin: true, banned: false }; return wait(); },
       async signOut() { me = { signed_in: false, is_anonymous: true, username: null, is_admin: false, banned: false }; return wait(); },
       async pendingUsername() { return null; },
@@ -305,29 +350,178 @@
     icedB.append(el("span", "cup-ico", "🧊"), el("span", "cup-n", String(item.iced_cups)));
     icedB.addEventListener("click", () => vote(item, item.my_vote === -1 ? 0 : -1, a));
 
-    bar.append(hotB, icedB);
+    const open = openThreads.has(item.id);
+    const chatB = el("button", "cup cup-chat");
+    chatB.type = "button";
+    chatB.setAttribute("aria-expanded", String(open));
+    chatB.setAttribute("aria-label", item.reply_count ? t.repliesBtn(item.reply_count) : t.replyFirst);
+    chatB.append(el("span", "cup-ico", "💬"), el("span", "cup-n", item.reply_count ? String(item.reply_count) : t.replyFirst));
+    bar.append(hotB, icedB, chatB);
 
+    const entries = [];
+    if (!item.is_mine) entries.push([t.report, () => report(item)]);
+    if (item.is_mine || state.me.is_admin) entries.push([t.del, () => del(item), true]);
+    if (state.me.is_admin) {
+      entries.push([item.hidden ? t.unhide : t.hide, () => hide(item, !item.hidden)]);
+      if (!item.is_mine) entries.push([t.ban, () => ban(item), true]);
+    }
+    if (entries.length) bar.appendChild(menuFor(entries));
+    a.appendChild(bar);
+
+    const th = el("div", "thread");
+    th.hidden = !open;
+    a.appendChild(th);
+    chatB.addEventListener("click", () => toggleThread(item, a));
+    if (open) {
+      if (threadCache.has(item.id)) paintThread(item, th, threadCache.get(item.id));
+      else loadThread(item, a);
+    }
+    return a;
+  }
+
+  function menuFor(entries) {
     const menu = el("details", "more");
     const sum = el("summary", null, "···");
     sum.setAttribute("aria-label", "Options");
     menu.appendChild(sum);
     const list = el("div", "more-list");
-    const add = (label, fn, danger) => {
+    entries.forEach(([label, fn, danger]) => {
       const b = el("button", danger ? "danger" : null, label);
       b.type = "button";
       b.addEventListener("click", () => { menu.open = false; fn(); });
       list.appendChild(b);
-    };
-    if (!item.is_mine) add(t.report, () => report(item));
-    if (item.is_mine || state.me.is_admin) add(t.del, () => del(item), true);
-    if (state.me.is_admin) {
-      add(item.hidden ? t.unhide : t.hide, () => hide(item, !item.hidden));
-      if (!item.is_mine) add(t.ban, () => ban(item), true);
-    }
+    });
     menu.appendChild(list);
-    bar.appendChild(menu);
-    a.appendChild(bar);
-    return a;
+    return menu;
+  }
+
+  // ── Replies (group chat under each chisme) ──────────────────────────
+  const openThreads = new Set();
+  const threadCache = new Map();
+
+  function setChatCount(item, node) {
+    const n = node.querySelector(".cup-chat .cup-n");
+    if (n) n.textContent = item.reply_count ? String(item.reply_count) : T().replyFirst;
+    const b = node.querySelector(".cup-chat");
+    if (b) b.setAttribute("aria-label", item.reply_count ? T().repliesBtn(item.reply_count) : T().replyFirst);
+  }
+
+  function toggleThread(item, node) {
+    const th = node.querySelector(".thread");
+    const btn = node.querySelector(".cup-chat");
+    if (openThreads.has(item.id)) {
+      openThreads.delete(item.id);
+      th.hidden = true;
+      btn.setAttribute("aria-expanded", "false");
+      return;
+    }
+    openThreads.add(item.id);
+    th.hidden = false;
+    btn.setAttribute("aria-expanded", "true");
+    loadThread(item, node);
+  }
+
+  async function loadThread(item, node) {
+    const th = node.querySelector(".thread");
+    if (!threadCache.has(item.id)) { th.textContent = ""; th.appendChild(el("p", "thread-empty", "…")); }
+    try {
+      const list = await api.replies(item.id);
+      threadCache.set(item.id, list);
+      item.reply_count = list.filter((r) => !r.hidden).length;
+      setChatCount(item, node);
+      paintThread(item, th, list);
+    } catch (e) { toast(errText(e)); }
+  }
+
+  function whoLabel(r) {
+    const t = T();
+    let name = r.author_name ? "@" + r.author_name : r.who_n === 0 ? t.op : t.anonN(r.who_n);
+    if (r.author_name && r.who_n === 0) name += " · " + t.op;
+    if (r.is_mine) return r.who_n === 0 ? `${t.op} (${t.you})` : t.youCap;
+    return name;
+  }
+
+  function paintThread(item, th, list) {
+    const t = T();
+    th.textContent = "";
+    const log = el("div", "chat");
+    if (!list.length) log.appendChild(el("p", "thread-empty", t.noReplies));
+    let prevWho = null;
+    list.forEach((r) => {
+      const key = r.is_mine ? "me" : r.who_n;
+      const m = el("div", "msg " + (r.is_mine ? "msg-mine" : "msg-them") + (r.who_n === 0 ? " msg-op" : ""));
+      if (r.hidden) m.classList.add("is-hidden");
+      if (key !== prevWho) m.appendChild(el("span", "msg-who", whoLabel(r)));
+      else m.classList.add("msg-cont");
+      prevWho = key;
+      const b = el("p", "msg-body", r.body);
+      b.lang = item.lang;
+      m.appendChild(b);
+      const meta = el("div", "msg-meta");
+      meta.appendChild(el("time", null, ago(r.created_at)));
+      if (r.hidden) meta.appendChild(el("span", "flag", t.hiddenTag));
+      if (r.report_count > 0) meta.appendChild(el("span", "flag", t.reportsTag(r.report_count)));
+      const entries = [];
+      if (!r.is_mine) entries.push([t.report, () => replyAction(item, () => api.reportReply(r.id), t.reportedOk)]);
+      if (r.is_mine || state.me.is_admin) entries.push([t.del, () => { if (confirm(t.confirmDel)) replyAction(item, () => api.delReply(r.id), t.deleted); }, true]);
+      if (state.me.is_admin) {
+        entries.push([r.hidden ? t.unhide : t.hide, () => replyAction(item, () => api.hideReply(r.id, !r.hidden), r.hidden ? t.unhiddenOk : t.hiddenOk)]);
+        if (!r.is_mine) entries.push([t.ban, () => { if (confirm(t.confirmBan)) replyAction(item, () => api.banReplyAuthor(r.id), t.banned); }, true]);
+      }
+      meta.appendChild(menuFor(entries));
+      m.appendChild(meta);
+      log.appendChild(m);
+    });
+    th.appendChild(log);
+
+    // Reply box
+    const f = el("form", "reply-form");
+    const input = el("textarea");
+    input.rows = 1; input.maxLength = 500; input.placeholder = t.replyPlaceholder;
+    input.id = "reply-" + item.id;
+    input.setAttribute("aria-label", t.replyPlaceholder);
+    input.addEventListener("input", () => { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 140) + "px"; });
+    const send = el("button", "send", t.send);
+    send.type = "submit";
+    f.append(input, send);
+    let asMe = null;
+    if (state.me.username && !state.me.is_anonymous) {
+      const lab = el("label", "check check-small");
+      asMe = el("input"); asMe.type = "checkbox";
+      lab.append(asMe, el("span", null, "@" + state.me.username));
+      f.appendChild(lab);
+    }
+    const msg = el("p", "form-msg");
+    f.appendChild(msg);
+    f.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const code = precheck(input.value, true);
+      if (code) { msg.textContent = t.errors[code]; msg.className = "form-msg err"; return; }
+      send.disabled = true; msg.textContent = "";
+      try {
+        await api.ensureSession();
+        await api.reply(item.id, input.value, asMe ? asMe.checked : false);
+        input.value = "";
+        const node = th.closest(".bubble");
+        await loadThread(item, node);
+        const again = node.querySelector(".reply-form textarea");
+        if (again) again.focus();
+        refreshMe();
+      } catch (e) {
+        msg.textContent = errText(e); msg.className = "form-msg err";
+      } finally { send.disabled = false; }
+    });
+    th.appendChild(f);
+  }
+
+  async function replyAction(item, fn, okMsg) {
+    try {
+      await api.ensureSession();
+      await fn();
+      toast(okMsg);
+      const node = document.querySelector(`.bubble[data-id="${item.id}"]`);
+      if (node) await loadThread(item, node);
+    } catch (e) { toast(errText(e)); }
   }
 
   function paintFeed() {

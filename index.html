@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OnlyChismosas</title>
+  <meta name="description" content="Spill the tea. Suelta el chisme. Anonymous gossip, voted by tea cups.">
+  <meta property="og:title" content="OnlyChismosas">
+  <meta property="og:description" content="Spill the tea. Suelta el chisme.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Shrikhand&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-row">
+      <h1 class="mark">OnlyChismosas</h1>
+      <div class="top-actions">
+        <button class="pill" id="langBtn" type="button" aria-label="Change language">EN</button>
+        <button class="pill pill-strong" id="acctBtn" type="button"></button>
+      </div>
+    </div>
+    <p class="wrap tagline" id="tagline"></p>
+  </header>
+
+  <main class="wrap">
+    <div class="demo-note" id="demoNote" hidden></div>
+
+    <form class="composer" id="composer" novalidate>
+      <label class="sr-only" for="body" id="bodyLabel"></label>
+      <textarea id="body" maxlength="1000" rows="3" required></textarea>
+      <div class="composer-row">
+        <div class="seg" role="radiogroup" id="postLang">
+          <label><input type="radio" name="plang" value="es" checked><span>Español</span></label>
+          <label><input type="radio" name="plang" value="en"><span>English</span></label>
+        </div>
+        <span class="count" id="count">0 / 1000</span>
+      </div>
+      <label class="check" id="showNameRow" hidden><input type="checkbox" id="showName"> <span id="showNameText"></span></label>
+      <div class="composer-row">
+        <button type="button" class="link" id="rulesLink"></button>
+        <button type="submit" class="btn" id="postBtn"></button>
+      </div>
+      <p class="form-msg" id="postMsg" role="status"></p>
+    </form>
+
+    <nav class="feed-tools" aria-label="Feed">
+      <div class="tabs" role="tablist" id="sortTabs">
+        <button role="tab" data-sort="hot"></button>
+        <button role="tab" data-sort="new"></button>
+        <button role="tab" data-sort="top"></button>
+        <button role="tab" data-sort="reported" id="reportedTab" hidden></button>
+      </div>
+      <div class="seg seg-small" id="langFilter">
+        <label><input type="radio" name="flang" value="all" checked><span id="allLbl"></span></label>
+        <label><input type="radio" name="flang" value="es"><span>ES</span></label>
+        <label><input type="radio" name="flang" value="en"><span>EN</span></label>
+      </div>
+    </nav>
+
+    <section class="feed" id="feed" aria-live="polite"></section>
+    <div class="feed-end">
+      <button class="btn btn-ghost" id="moreBtn" hidden></button>
+      <p class="empty" id="emptyMsg" hidden></p>
+    </div>
+  </main>
+
+  <footer class="foot wrap">
+    <button class="link" id="rulesLink2"></button>
+    <p id="footNote"></p>
+  </footer>
+
+  <!-- Account -->
+  <dialog id="acctDlg">
+    <form method="dialog" class="dlg">
+      <button class="x" value="close" aria-label="Close">×</button>
+      <div id="acctBody"></div>
+    </form>
+  </dialog>
+
+  <!-- Rules -->
+  <dialog id="rulesDlg">
+    <form method="dialog" class="dlg">
+      <button class="x" value="close" aria-label="Close">×</button>
+      <h2 id="rulesTitle"></h2>
+      <ul class="rules" id="rulesList"></ul>
+      <button class="btn" value="close" id="rulesOk" autofocus></button>
+    </form>
+  </dialog>
+
+  <!-- Human check -->
+  <dialog id="captchaDlg">
+    <div class="dlg">
+      <h2 id="captchaTitle"></h2>
+      <div id="captchaBox"></div>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="i18n.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

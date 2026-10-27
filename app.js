@@ -258,7 +258,6 @@
     tag: null,           // topic filter
     postTag: null,       // topic picked in the composer
     single: null,        // id when viewing one chisme from a shared link
-    featured: null,
     items: [], offset: 0, done: false, loading: false,
     me: { signed_in: false, is_anonymous: true, username: null, is_admin: false },
   };
@@ -579,7 +578,6 @@
     const empty = !state.loading && state.items.length === 0;
     $("emptyMsg").hidden = !empty;
     $("emptyMsg").textContent = single ? T().notFoundPost : state.sort === "reported" ? T().emptyReported : T().empty;
-    paintFeatured();
   }
 
   async function loadFeed(reset) {
@@ -598,32 +596,6 @@
       state.loading = false;
       paintFeed();
     }
-    if (reset) loadFeatured();
-  }
-
-  // ── Chisme del día ──────────────────────────────────────────────────
-  async function loadFeatured() {
-    try { state.featured = await api.today(); } catch { state.featured = null; }
-    paintFeatured();
-  }
-
-  function paintFeatured() {
-    const box = $("featured"), t = T(), f = state.featured;
-    const show = f && state.single == null && state.sort !== "reported";
-    box.hidden = !show;
-    if (!show) return;
-    box.textContent = "";
-    box.appendChild(el("p", "featured-label", t.featured));
-    const body = el("p", "featured-body", f.body);
-    body.lang = f.lang;
-    box.appendChild(body);
-    const row = el("div", "featured-row");
-    row.appendChild(el("span", "featured-stats", `☕ ${f.hot_cups}   💬 ${f.reply_count || 0}`));
-    const go = el("button", "btn btn-small", t.seeChisme);
-    go.type = "button";
-    go.addEventListener("click", () => { location.hash = "c" + f.id; });
-    row.appendChild(go);
-    box.appendChild(row);
   }
 
   // ── One chisme from a shared link (#c123) ───────────────────────────

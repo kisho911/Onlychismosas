@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Admin · OnlyChismosas</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Shrikhand&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-row">
+      <h1 class="mark mark-small">OnlyChismosas</h1>
+      <a class="pill" href="./">Back to site</a>
+    </div>
+    <p class="wrap tagline">Admin</p>
+  </header>
+
+  <main class="wrap">
+    <div class="demo-note" id="demoNote" hidden>Demo mode: fake data, nothing is saved.</div>
+
+    <section id="gate" class="gate" hidden>
+      <h2>Admins only</h2>
+      <p>Sign in on the main site with your admin account, then come back to this page.</p>
+      <a class="btn" href="./">Go to the site</a>
+    </section>
+
+    <div id="panel" hidden>
+      <section class="stats" id="stats" aria-label="Site numbers"></section>
+
+      <nav class="tabs admin-tabs" role="tablist" id="adminTabs">
+        <button role="tab" data-tab="reports" aria-selected="true">🚩 Reports <span class="count-badge" id="reportsCount"></span></button>
+        <button role="tab" data-tab="recent" aria-selected="false">✨ Latest</button>
+        <button role="tab" data-tab="banned" aria-selected="false">🚫 Banned</button>
+      </nav>
+
+      <section id="list" class="admin-list" aria-live="polite"></section>
+    </div>
+  </main>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

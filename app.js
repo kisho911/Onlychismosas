@@ -307,6 +307,7 @@
     $("showNameRow").hidden = !(real && me.username);
     if (me.username) $("showNameText").textContent = t.showName(me.username);
     $("reportedTab").hidden = !me.is_admin;
+    $("adminLink").hidden = !me.is_admin;
     if (!me.is_admin && state.sort === "reported") state.sort = "hot";
   }
 

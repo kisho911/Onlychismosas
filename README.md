@@ -21,7 +21,7 @@ While `config.js` is empty, the site runs in demo mode with fake posts.
 
 ### 1. Supabase (the database)
 1. Sign up at **supabase.com** and click **New project**. Name it `onlychismosas`, pick region **East US**, and save the database password somewhere.
-2. Open **SQL Editor**, click **New query**, paste all of `supabase/schema.sql`, and click **Run**. You should see "Success". Then do the same with `supabase/02_replies.sql` (replies / group chat).
+2. Open **SQL Editor**, click **New query**, paste all of `supabase/schema.sql`, and click **Run**. You should see "Success". Then do the same with `supabase/02_replies.sql` (replies / group chat) and `supabase/03_admin.sql` (admin page).
 3. Go to **Authentication → Sign In / Providers**:
    - Turn **on** "Allow anonymous sign-ins". Visitors can't vote or post without this.
    - Under **Email**, turn **off** "Confirm email". The free plan only sends a few emails per hour.
@@ -60,7 +60,7 @@ DNS takes anywhere from 10 minutes to a few hours. Once GitHub Pages shows the d
    update public.profiles set is_admin = true
    where id = (select id from auth.users where email = 'YOUR@EMAIL.com');
    ```
-3. Reload the site. You'll see the **🚩 Reported** tab, and every post's `···` menu now has Hide, Delete and Ban.
+3. Reload the site. An **Admin** button appears at the top (or go to onlychismosas.com/admin.html): numbers, every report, latest posts, and banned people. Posts and replies also get Hide, Delete and Ban in their `···` menu.
 
 ---
 

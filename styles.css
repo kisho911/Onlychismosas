@@ -83,6 +83,7 @@ button { cursor: pointer; }
   font-size: 14px;
   line-height: 1.2;
 }
+a.pill { text-decoration: none; color: inherit; display: inline-flex; align-items: center; }
 .pill-strong { background: var(--plum); color: var(--rose); max-width: 42vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .demo-note {
